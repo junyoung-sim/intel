@@ -42,7 +42,7 @@ void test_dnn() {
     }
 
     DeepNet model("test", {{3,3}, {3,3}, {3,2}});
-    //model.use_softmax();
+    model.use_softmax();
     model.load();
 
     for(unsigned int i = 0; i < 10; i++) {
