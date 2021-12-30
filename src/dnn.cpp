@@ -28,7 +28,7 @@ void softmax(std::vector<double> &mat) {
     }
 }
 
-double softmax_prime(double x) {
+double softmax_prime(double x) { // x must be a probability
     return x * (1 - x);
 }
 
@@ -104,8 +104,8 @@ std::vector<double> DeepNet::predict(std::vector<double> &x) {
         std::vector<Node> *nodes = layers[l].get_nodes();
         for(unsigned int n = 0; n < layers[l].out_features(); n++) {
             double dot = 0.00;
-            std::vector<double> *weights = (*nodes)[n].weight_vector();
             (*nodes)[n].init();
+            std::vector<double> *weights = (*nodes)[n].weight_vector();
             for(unsigned int i = 0; i < layers[l].in_features(); i++) {
                 if(l == 0) {
                     dot += x[i] * (*weights)[i];
@@ -173,6 +173,7 @@ void DeepNet::save() {
     std::string checkpoint = "./models/" + name + "/dnn/checkpoint";
     std::ofstream f(checkpoint);
     if(f.is_open()) {
+        if(softmax_enabled) f << "softmax\n";
         for(unsigned int l = 0; l < layers.size(); l++) {
             f << layers[l].in_features() << " " << layers[l].out_features() << " \n";
             std::vector<Node> *nodes = layers[l].get_nodes();
@@ -200,32 +201,37 @@ bool DeepNet::load() {
 
         layers.clear();
         while(std::getline(f, line)) {
-            for(unsigned int i = 0; i < line.length(); i++) {
-                if(line[i] != ' ') val += line[i];
-                else {
-                    if(val.compare("/") == 0) {
-                        n = 0; k = 0;
-                        shape.clear();
-                        have_shape = false;
-                    }
+            if(line.compare("softmax") == 0) {
+                softmax_enabled = true;
+            }
+            else {
+                for(unsigned int i = 0; i < line.length(); i++) {
+                    if(line[i] != ' ') val += line[i];
                     else {
-                        if(!have_shape) {
-                            shape.push_back(std::stoi(val));
-                            if(shape.size() == 2) {
-                                layers.push_back(Layer(shape[0], shape[1]));
-                                have_shape = true;
-                            } else {}
+                        if(val.compare("/") == 0) {
+                            n = 0; k = 0;
+                            shape.clear();
+                            have_shape = false;
                         }
                         else {
-                            std::vector<Node> *nodes = layers[layers.size() - 1].get_nodes();
-                            std::vector<double> *weights = (*nodes)[n].weight_vector();
-                            (*weights)[k] = std::stod(val);
-                            k++;
+                            if(!have_shape) {
+                                shape.push_back(std::stoi(val));
+                                if(shape.size() == 2) {
+                                    layers.push_back(Layer(shape[0], shape[1]));
+                                    have_shape = true;
+                                }
+                            }
+                            else {
+                                std::vector<Node> *nodes = layers[layers.size() - 1].get_nodes();
+                                std::vector<double> *weights = (*nodes)[n].weight_vector();
+                                (*weights)[k] = std::stod(val);
+                                k++;
 
-                            if(k == (*weights).size()) { n++; k = 0; }
+                                if(k == (*weights).size()) { n++; k = 0; }
+                            }
                         }
+                        val = "";
                     }
-                    val = "";
                 }
             }
         }

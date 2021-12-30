@@ -1,4 +1,4 @@
-
+ 
 #ifndef __LINEAR_HPP_
 #define __LINEAR_HPP_
 
