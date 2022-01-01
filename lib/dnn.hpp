@@ -9,9 +9,6 @@
 double relu(double x);
 double relu_prime(double x);
 
-void softmax(std::vector<double> &mat);
-double softmax_prime(double x);
-
 double mse(std::vector<double> &y, std::vector<double> &yhat);
 
 class Node
@@ -66,7 +63,6 @@ class DeepNet
 private:
     std::string name;
     std::vector<Layer> layers;
-    bool softmax_enabled;
 public:
     DeepNet(std::string model_name, std::vector<std::vector<double>> shape): name(model_name) {
         for(unsigned int l = 0; l < shape.size(); l++) {
@@ -74,7 +70,6 @@ public:
         }
     }
 
-    void use_softmax();
     std::vector<double> predict(std::vector<double> &x);
     void fit(std::vector<double> &x, std::vector<double> &y, double alpha);
     void save();

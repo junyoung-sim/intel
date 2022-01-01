@@ -18,20 +18,6 @@ double relu_prime(double x) {
     return x > 0.00 ? 1.00 : 0.00;
 }
 
-void softmax(std::vector<double> &mat) {
-    double exp_sum = 0.00;
-    for(double &x: mat) {
-        exp_sum += exp(x);
-    }
-    for(double &x: mat) {
-        x = exp(x) / exp_sum;
-    }
-}
-
-double softmax_prime(double x) { // x must be a probability
-    return x * (1 - x);
-}
-
 double mse(std::vector<double> &y, std::vector<double> &yhat) {
     double cost = 0.00;
     for(unsigned int i = 0; i < y.size(); i++) {
@@ -93,10 +79,6 @@ std::vector<Node> * Layer::get_nodes() {
 
 //--------------------------------------------------
 
-void DeepNet::use_softmax() {
-    softmax_enabled = true;
-}
-
 std::vector<double> DeepNet::predict(std::vector<double> &x) {
     std::vector<double> yhat;
     // fully connected forward propagation
@@ -116,20 +98,13 @@ std::vector<double> DeepNet::predict(std::vector<double> &x) {
             }
 
             (*nodes)[n].set_summation(dot);
-            if(l != layers.size() - 1) {
-                (*nodes)[n].compute_activation();
-            }
-            else if(l == layers.size() - 1 && softmax_enabled) {
-                yhat.push_back((*nodes)[n].summation());
-            }
-            else {
-                (*nodes)[n].compute_activation();
+            (*nodes)[n].compute_activation();
+
+            if(l == layers.size() - 1) {
                 yhat.push_back((*nodes)[n].activation());
             }
         }
     }
-
-    if(softmax_enabled) softmax(yhat);
 
     return yhat;
 }
@@ -144,12 +119,7 @@ void DeepNet::fit(std::vector<double> &x, std::vector<double> &y, double alpha) 
             // compute gradient
             double gradient = 0.00;
             if(l == layers.size() - 1) {
-                if(softmax_enabled) {
-                    gradient = (-2.00 / y.size()) * (y[n] - yhat[n]) * softmax_prime(yhat[n]);
-                }
-                else {
-                    gradient = (-2.00 / y.size()) * (y[n] - yhat[n]) * relu_prime((*nodes)[n].summation());
-                }
+                gradient = (-2.00 / y.size()) * (y[n] - yhat[n]) * relu_prime((*nodes)[n].summation());
             }
             else {
                 gradient = (*nodes)[n].error_summation() * relu_prime((*nodes)[n].summation());
@@ -173,7 +143,6 @@ void DeepNet::save() {
     std::string checkpoint = "./models/" + name + "/dnn/checkpoint";
     std::ofstream f(checkpoint);
     if(f.is_open()) {
-        if(softmax_enabled) f << "softmax\n";
         for(unsigned int l = 0; l < layers.size(); l++) {
             f << layers[l].in_features() << " " << layers[l].out_features() << " \n";
             std::vector<Node> *nodes = layers[l].get_nodes();
@@ -201,37 +170,32 @@ bool DeepNet::load() {
 
         layers.clear();
         while(std::getline(f, line)) {
-            if(line.compare("softmax") == 0) {
-                softmax_enabled = true;
-            }
-            else {
-                for(unsigned int i = 0; i < line.length(); i++) {
-                    if(line[i] != ' ') val += line[i];
+            for(unsigned int i = 0; i < line.length(); i++) {
+                if(line[i] != ' ') val += line[i];
+                else {
+                    if(val.compare("/") == 0) {
+                        n = 0; k = 0;
+                        shape.clear();
+                        have_shape = false;
+                    }
                     else {
-                        if(val.compare("/") == 0) {
-                            n = 0; k = 0;
-                            shape.clear();
-                            have_shape = false;
+                        if(!have_shape) {
+                            shape.push_back(std::stoi(val));
+                            if(shape.size() == 2) {
+                                layers.push_back(Layer(shape[0], shape[1]));
+                                have_shape = true;
+                            }
                         }
                         else {
-                            if(!have_shape) {
-                                shape.push_back(std::stoi(val));
-                                if(shape.size() == 2) {
-                                    layers.push_back(Layer(shape[0], shape[1]));
-                                    have_shape = true;
-                                }
-                            }
-                            else {
-                                std::vector<Node> *nodes = layers[layers.size() - 1].get_nodes();
-                                std::vector<double> *weights = (*nodes)[n].weight_vector();
-                                (*weights)[k] = std::stod(val);
-                                k++;
+                            std::vector<Node> *nodes = layers[layers.size() - 1].get_nodes();
+                            std::vector<double> *weights = (*nodes)[n].weight_vector();
+                            (*weights)[k] = std::stod(val);
+                            k++;
 
-                                if(k == (*weights).size()) { n++; k = 0; }
-                            }
+                            if(k == (*weights).size()) { n++; k = 0; }
                         }
-                        val = "";
                     }
+                    val = "";
                 }
             }
         }
