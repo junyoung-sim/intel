@@ -40,4 +40,3 @@ void pattern_detection(std::vector<double> &raw, unsigned int window) {
         frequency.push_back(count);
     }
 }
-}
