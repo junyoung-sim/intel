@@ -100,9 +100,7 @@ std::vector<double> DeepNet::predict(std::vector<double> &x) {
             (*nodes)[n].set_summation(dot);
             (*nodes)[n].compute_activation();
 
-            if(l == layers.size() - 1) {
-                yhat.push_back((*nodes)[n].activation());
-            }
+            if(l == layers.size() - 1) yhat.push_back((*nodes)[n].activation());
         }
     }
 

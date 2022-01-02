@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "../lib/bar.hpp"
+#include "../lib/data.hpp"
 #include "../lib/dnn.hpp"
 #include "../lib/linear.hpp"
 #include "../lib/signal.hpp"
@@ -71,13 +72,15 @@ void test_dnn() {
 }
 
 void test_signal_pattern_detection() {
-
+     std::vector<double> raw = load_adjusted_close("./data/spy.csv");
+     binary_pattern_detection(raw, 5);
 }
 
 int main()
 {
     //test_linear();
     //test_dnn();
+    //test_signal_pattern_detection();
     return 0;
 }
 

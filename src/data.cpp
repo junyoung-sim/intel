@@ -17,7 +17,7 @@ std::vector<double> load_adjusted_close(std::string path) {
 
         while(std::getline(f, line)) {
             if(line_count != 0) {
-                int comma[6];
+                int comma[8];
                 for(unsigned int i = 0; i < line.length(); i++) {
                     if(line[i] == ','){
                         comma[value_count] = i;

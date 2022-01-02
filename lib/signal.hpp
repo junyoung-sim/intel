@@ -4,6 +4,6 @@
 
 #include <vector>
 
-void pattern_detection(std::vector<double> &raw, unsigned int window);
+void binary_pattern_detection(std::vector<double> &raw, unsigned int window);
 
 #endif
