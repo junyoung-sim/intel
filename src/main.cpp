@@ -26,28 +26,13 @@ void test_linear() {
 }
 
 void test_dnn() {
-    std::vector<std::vector<double>> x;
-    for(unsigned int k = 0; k < 1000; k++) {
-        std::vector<double> x_k;
-        for(unsigned int i = 0; i < 3; i++) {
-            x_k.push_back(-1.0 + (double)rand() / RAND_MAX * (1.0 - (-1.0)));
-        }
-        x.push_back(x_k);
-    }
+    std::vector<std::vector<double>> x = {{0.3, 0.2}, {0.6, 0.9}, {1.0,0.2}, {0.8, 0.9}, {0.4, 0.1}, {0.1, 0.3}};
+    std::vector<std::vector<double>> y = {{0.0}, {1.0}, {1.0}, {1.0}, {0.0}, {0.0}};
 
-    std::vector<std::vector<double>> y;
-    for(unsigned int k = 0; k < 1000; k++) {
-        std::vector<double> y_k;
-        for(unsigned int i = 0; i < 2; i++) {
-            y_k.push_back((double)rand() / RAND_MAX);
-        }
-        y.push_back(y_k);
-    }
-
-    DeepNet model("test", {{3,3},{3,2}});
+    DeepNet model("test", {{2,2},{2,1}});
     model.load();
 
-    unsigned int epoch = 10000;
+    unsigned int epoch = 1000;
     double alpha = 0.01;
     double decay = 0.01;
 
@@ -71,16 +56,17 @@ void test_dnn() {
     model.save();
 }
 
-void test_signal_pattern_detection() {
-     std::vector<double> raw = load_adjusted_close("./data/spy.csv");
-     binary_pattern_detection(raw, 5);
+void test_binary_pattern_detection() {
+    std::vector<double> raw = load_adjusted_close("./data/spy.csv");
+    binary_pattern_detection(raw, 5);
 }
 
 int main()
 {
     //test_linear();
-    //test_dnn();
+    test_dnn();
     //test_signal_pattern_detection();
     return 0;
+
 }
 

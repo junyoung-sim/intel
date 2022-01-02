@@ -115,20 +115,20 @@ void DeepNet::fit(std::vector<double> &x, std::vector<double> &y, double alpha) 
         for(unsigned int n = 0; n < layers[l].out_features(); n++) {
             std::vector<double> *weights = (*nodes)[n].weight_vector();
             // compute gradient
-            double gradient = 0.00;
+            double partial_gradient, gradient = 0.00;
             if(l == layers.size() - 1) {
-                gradient = (-2.00 / y.size()) * (y[n] - yhat[n]) * relu_prime((*nodes)[n].summation());
+                partial_gradient = (-2.00 / y.size()) * (y[n] - yhat[n]) * relu_prime((*nodes)[n].summation());
             }
             else {
-                gradient = (*nodes)[n].error_summation() * relu_prime((*nodes)[n].summation());
+                partial_gradient = (*nodes)[n].error_summation() * relu_prime((*nodes)[n].summation());
             }
             for(unsigned int i = 0; i < layers[l].in_features(); i++) {
                 if(l != 0) {
-                    (*layers[l-1].get_nodes())[i].add_error_summation(gradient * (*weights)[i]);
-                    gradient *= (*layers[l-1].get_nodes())[i].activation();
+                    gradient = partial_gradient * (*layers[l-1].get_nodes())[i].activation();
+                    (*layers[l-1].get_nodes())[i].add_error_summation(partial_gradient * (*weights)[i]);
                 }
-                else {
-                    gradient *= x[i];
+               else {
+                    gradient = partial_gradient * x[i];
                 }
                 (*weights)[i] -= alpha * gradient;
             }

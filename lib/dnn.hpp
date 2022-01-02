@@ -1,6 +1,6 @@
 
-#ifndef __DNN_HPP_
-#define __DNN_HPP_
+#ifndef __DEEP_NEURAL_NETWORK_HPP_
+#define __DEEP_NEURAL_NETWORK_HPP_
 
 #include <cstdlib>
 #include <vector>
