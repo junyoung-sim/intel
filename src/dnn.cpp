@@ -18,6 +18,14 @@ double relu_prime(double x) {
     return x > 0.00 ? 1.00 : 0.00;
 }
 
+double sigmoid(double x) {
+    return 1 / (1 + exp(-x));
+}
+
+double sigmoid_prime(double x) {
+    return exp(-x) * pow(sigmoid(x), 2);
+}
+
 double mse(std::vector<double> &y, std::vector<double> &yhat) {
     double cost = 0.00;
     for(unsigned int i = 0; i < y.size(); i++) {
@@ -54,7 +62,8 @@ void Node::set_summation(double val) {
 }
 
 void Node::compute_activation() {
-    act = relu(sum);
+//    act = relu(sum);
+    act = sigmoid(sum);
 }
 
 void Node::init() {
@@ -117,10 +126,12 @@ void DeepNet::fit(std::vector<double> &x, std::vector<double> &y, double alpha) 
             // compute gradient
             double partial_gradient, gradient = 0.00;
             if(l == layers.size() - 1) {
-                partial_gradient = (-2.00 / y.size()) * (y[n] - yhat[n]) * relu_prime((*nodes)[n].summation());
+//                partial_gradient = (-2.00 / y.size()) * (y[n] - yhat[n]) * relu_prime((*nodes)[n].summation());
+                partial_gradient = (-2.00 / y.size()) * (y[n] - yhat[n]) * sigmoid_prime((*nodes)[n].summation());
             }
             else {
-                partial_gradient = (*nodes)[n].error_summation() * relu_prime((*nodes)[n].summation());
+//                partial_gradient = (*nodes)[n].error_summation() * relu_prime((*nodes)[n].summation());
+                partial_gradient = (*nodes)[n].error_summation() * sigmoid_prime((*nodes)[n].summation());
             }
             for(unsigned int i = 0; i < layers[l].in_features(); i++) {
                 if(l != 0) {
@@ -166,7 +177,6 @@ bool DeepNet::load() {
         bool have_shape = false;
         unsigned int n, k = 0;
 
-        layers.clear();
         while(std::getline(f, line)) {
             for(unsigned int i = 0; i < line.length(); i++) {
                 if(line[i] != ' ') val += line[i];

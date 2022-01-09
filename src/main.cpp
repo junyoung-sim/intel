@@ -7,7 +7,6 @@
 #include "../lib/data.hpp"
 #include "../lib/dnn.hpp"
 #include "../lib/linear.hpp"
-#include "../lib/signal.hpp"
 
 void test_linear() {
     LinearRegression model;
@@ -29,8 +28,8 @@ void test_dnn() {
     std::vector<std::vector<double>> x = {{0.3, 0.2}, {0.6, 0.9}, {1.0,0.2}, {0.8, 0.9}, {0.4, 0.1}, {0.1, 0.3}};
     std::vector<std::vector<double>> y = {{0.0}, {1.0}, {1.0}, {1.0}, {0.0}, {0.0}};
 
-    DeepNet model("test", {{2,2},{2,1}});
-    model.load();
+    DeepNet model("test");
+    if(!model.load()) model.init({{2,2},{2,1}});
 
     unsigned int epoch = 1000;
     double alpha = 0.01;
@@ -56,16 +55,10 @@ void test_dnn() {
     model.save();
 }
 
-void test_binary_pattern_detection() {
-    std::vector<double> raw = load_adjusted_close("./data/spy.csv");
-    binary_pattern_detection(raw, 5);
-}
-
 int main()
 {
     //test_linear();
-    test_dnn();
-    //test_signal_pattern_detection();
+    //test_dnn();
     return 0;
 
 }

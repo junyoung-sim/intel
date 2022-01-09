@@ -9,6 +9,9 @@
 double relu(double x);
 double relu_prime(double x);
 
+double sigmoid(double x);
+double sigmoid_prime(double x);
+
 double mse(std::vector<double> &y, std::vector<double> &yhat);
 
 class Node
@@ -64,12 +67,12 @@ private:
     std::string name;
     std::vector<Layer> layers;
 public:
-    DeepNet(std::string model_name, std::vector<std::vector<double>> shape): name(model_name) {
+    DeepNet(std::string model_name): name(model_name) {}
+    void init(std::vector<std::vector<double>> shape) {
         for(unsigned int l = 0; l < shape.size(); l++) {
             layers.push_back(Layer(shape[l][0], shape[l][1]));
         }
     }
-
     std::vector<double> predict(std::vector<double> &x);
     void fit(std::vector<double> &x, std::vector<double> &y, double alpha);
     void save();
