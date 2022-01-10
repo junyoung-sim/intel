@@ -6,19 +6,6 @@
 
 #include "../lib/util.hpp"
 
-bool data_exists(std::string ticker) {
-    std::ifstream f("./data/" + ticker + ".csv");
-    return f.is_open();
-}
-
-bool download(std::string ticker) {
-    if (!data_exists(ticker)) {
-        std::string cmd = "./python/download.py " + ticker;
-        std::system(cmd.c_str());
-    }
-    return data_exists(ticker);
-}
-
 std::vector<std::string> read_lines(std::string path) {
     std::vector<std::string> lines;
 
