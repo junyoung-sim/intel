@@ -54,6 +54,7 @@ void test_dnn() {
     }
 
     model.save();
+    model.kill();
 }
 
 void test_vector_estimation() {
@@ -67,8 +68,8 @@ void test_vector_estimation() {
 int main()
 {
     //test_linear();
-    //test_dnn();
-    test_vector_estimation();
+    test_dnn();
+    //test_vector_estimation();
     return 0;
 
 }

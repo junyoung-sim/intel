@@ -212,3 +212,14 @@ bool DeepNet::load() {
     return loaded;
 }
 
+void DeepNet::kill() {
+    for(unsigned int l = 0; l < layers.size(); l++) {
+        for(unsigned int n = 0; n < layers[l].out_features(); n++) {
+            std::vector<double> *weights = (*layers[l].get_nodes())[n].weight_vector();
+            (*weights).clear();
+        }
+        (*layers[l].get_nodes()).clear();
+    }
+    layers.clear();
+}
+

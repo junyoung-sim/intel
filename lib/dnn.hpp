@@ -77,6 +77,7 @@ public:
     void fit(std::vector<double> &x, std::vector<double> &y, double alpha);
     void save();
     bool load();
+    void kill();
 };
 
 #endif
