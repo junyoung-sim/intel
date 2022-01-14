@@ -4,9 +4,10 @@
 #include <vector>
 
 #include "../lib/bar.hpp"
-#include "../lib/data.hpp"
+#include "../lib/util.hpp"
 #include "../lib/dnn.hpp"
 #include "../lib/linear.hpp"
+#include "../lib/signal.hpp"
 
 void test_linear() {
     LinearRegression model;
@@ -55,10 +56,19 @@ void test_dnn() {
     model.save();
 }
 
+void test_vector_estimation() {
+    std::vector<double> data = load_data("./data/data")[0];
+
+    double vector_est = vector_estimation(data);
+    std::cout << vector_est << "\n";
+    
+}
+
 int main()
 {
     //test_linear();
     //test_dnn();
+    test_vector_estimation();
     return 0;
 
 }
