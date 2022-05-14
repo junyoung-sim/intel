@@ -1,225 +1,204 @@
 
 #include <cstdlib>
-#include <fstream>
+#include <iostream>
 #include <vector>
-#include <chrono>
 #include <cmath>
 
 #include "../lib/dnn.hpp"
+#include "../lib/data.hpp"
+#include "../lib/bar.hpp"
 
-//--------------------------------------------------
+double elu(double x) { return x > 0.00 ? x : exp(x) - 1; }
+double elu_prime(double x) { return x > 0.00 ? 1.00 : exp(x); }
 
-double relu(double x) {
-    return x > 0.00 ? x : 0.00;
-}
+void softmax(std::vector<double> &v) {
+    double exp_sum = 0.00;
+    for(double &v_i: v)
+        exp_sum += exp(v_i);
 
-double relu_prime(double x) {
-    return x > 0.00 ? 1.00 : 0.00;
-}
-
-double sigmoid(double x) {
-    return 1 / (1 + exp(-x));
-}
-
-double sigmoid_prime(double x) {
-    return exp(-x) * pow(sigmoid(x), 2);
+    for(double &v_i: v)
+        v_i = exp(v_i) / exp_sum;
 }
 
 double mse(std::vector<double> &y, std::vector<double> &yhat) {
-    double cost = 0.00;
-    for(unsigned int i = 0; i < y.size(); i++) {
-        cost += pow(y[i] - yhat[i], 2);
-    }
-    cost /= y.size();
-    return cost;
+    double loss = 0.00;
+    for(unsigned int i = 0; i < y.size(); i++)
+        loss += pow(y[i] - yhat[i], 2);
+    loss /= y.size();
+    return loss;
 }
 
-//--------------------------------------------------
-
-double Node::summation() {
-    return sum;   
+double binary_cross_entropy(std::vector<double> &y, std::vector<double> &yhat) {
+    double loss = 0.00;
+    for(unsigned int i = 0; i < y.size(); i++)
+        loss += y[i] * log(yhat[i]) + (1 - y[i]) * log(1 - yhat[i]);
+    loss *= -1.00 / y.size();
+    return loss;
 }
 
-double Node::activation() {
-    return act;
-}
-
-double Node::error_summation() {
-    return error;
-}
-
-std::vector<double> * Node::weight_vector() {
-    return &weights;
-}
-
-void Node::add_error_summation(double val) {
-    error += val;
-}
-
-void Node::set_summation(double val) {
-    sum = val;
-}
-
-void Node::compute_activation() {
-//    act = relu(sum);
-    act = sigmoid(sum);
-}
+// --- //
 
 void Node::init() {
     sum = 0.00;
     act = 0.00;
-    error = 0.00;
+    err = 0.00;
 }
 
-//--------------------------------------------------
+double Node::bias() { return b; }
+double Node::summation() { return sum; }
+double Node::activation() { return act; }
+double Node::error() { return err; }
+std::vector<double> *Node::weights() { return &w; }
 
-unsigned int Layer::in_features() {
-    return shape[0];
+void Node::set_summation(double dot) { sum = dot + b; }
+void Node::compute_activation() { act = elu(sum); }
+void Node::add_error(double val) { err += val; }
+void Node::update_bias(double delta) { b -= delta; }
+
+// --- //
+
+unsigned int Layer::in_features() { return in; }
+unsigned int Layer::out_features() { return out; }
+std::vector<Node> *Layer::nodes() { return &n; }
+
+// --- //
+
+void DNN::use_classifier() {
+    classifier = true;
 }
 
-unsigned int Layer::out_features() {
-    return shape[1];
-}
-
-std::vector<Node> * Layer::get_nodes() {
-    return &nodes;
-}
-
-//--------------------------------------------------
-
-std::vector<double> DeepNet::predict(std::vector<double> &x) {
+std::vector<double> DNN::predict(std::vector<double> &x) {
     std::vector<double> yhat;
-    // fully connected forward propagation
     for(unsigned int l = 0; l < layers.size(); l++) {
-        std::vector<Node> *nodes = layers[l].get_nodes();
+        std::vector<Node> *nodes = layers[l].nodes();
         for(unsigned int n = 0; n < layers[l].out_features(); n++) {
             double dot = 0.00;
-            (*nodes)[n].init();
-            std::vector<double> *weights = (*nodes)[n].weight_vector();
+            std::vector<double> *weights = (*nodes)[n].weights();
             for(unsigned int i = 0; i < layers[l].in_features(); i++) {
-                if(l == 0) {
+                if(l == 0)
                     dot += x[i] * (*weights)[i];
-                }
-                else {
-                    dot += (*layers[l-1].get_nodes())[i].activation() * (*weights)[i];
-                }
+                else
+                    dot += (*layers[l-1].nodes())[i].activation() * (*weights)[i];
             }
 
+            (*nodes)[n].init();
             (*nodes)[n].set_summation(dot);
             (*nodes)[n].compute_activation();
 
-            if(l == layers.size() - 1) yhat.push_back((*nodes)[n].activation());
+            if(l == layers.size() - 1) {
+                if(classifier)
+                    yhat.push_back((*nodes)[n].summation());
+                else
+                    yhat.push_back((*nodes)[n].activation());
+            }
         }
     }
+
+    if(classifier)
+        softmax(yhat);
 
     return yhat;
 }
 
-void DeepNet::fit(std::vector<double> &x, std::vector<double> &y, double alpha) {
+void DNN::fit(std::vector<double> &x, std::vector<double> &y, double alpha, unsigned int dataset_size) {
     std::vector<double> yhat = predict(x);
     // stochastic gradient descent
     for(int l = layers.size() - 1; l >= 0; l--) {
-        std::vector<Node> *nodes = layers[l].get_nodes();
+        std::vector<Node> *nodes = layers[l].nodes();
+
+        double partial_gradient = 0.00, gradient = 0.00;
         for(unsigned int n = 0; n < layers[l].out_features(); n++) {
-            std::vector<double> *weights = (*nodes)[n].weight_vector();
-            // compute gradient
-            double partial_gradient, gradient = 0.00;
             if(l == layers.size() - 1) {
-//                partial_gradient = (-2.00 / y.size()) * (y[n] - yhat[n]) * relu_prime((*nodes)[n].summation());
-                partial_gradient = (-2.00 / y.size()) * (y[n] - yhat[n]) * sigmoid_prime((*nodes)[n].summation());
+                if(classifier)
+                    partial_gradient = -1.00 / y.size() * (y[n] - yhat[n]); // softmax layer, binary cross entropy
+                else
+                    partial_gradient = -2.00 / y.size() * (y[n] - yhat[n]) * elu_prime((*nodes)[n].summation()); // MSE
             }
-            else {
-//                partial_gradient = (*nodes)[n].error_summation() * relu_prime((*nodes)[n].summation());
-                partial_gradient = (*nodes)[n].error_summation() * sigmoid_prime((*nodes)[n].summation());
-            }
+            else
+                partial_gradient = (*nodes)[n].error() * elu_prime((*nodes)[n].summation());
+
+            (*nodes)[n].update_bias(alpha * partial_gradient);
+
+            std::vector<double> *weights = (*nodes)[n].weights();
             for(unsigned int i = 0; i < layers[l].in_features(); i++) {
-                if(l != 0) {
-                    gradient = partial_gradient * (*layers[l-1].get_nodes())[i].activation();
-                    (*layers[l-1].get_nodes())[i].add_error_summation(partial_gradient * (*weights)[i]);
+                if(l > 0) {
+                    gradient = partial_gradient * (*layers[l-1].nodes())[i].activation();
+                    (*layers[l-1].nodes())[i].add_error(partial_gradient * (*weights)[i]);
                 }
-               else {
-                    gradient = partial_gradient * x[i];
-                }
+                else
+                   gradient = partial_gradient * x[i];
+
+                gradient += 1.00 / dataset_size * (*weights)[i]; // L2 Regularization
                 (*weights)[i] -= alpha * gradient;
             }
         }
     }
-    yhat.clear();
+
+    std::vector<double>().swap(yhat);
 }
 
-void DeepNet::save() {
-    std::string checkpoint = "./models/" + name + "/dnn/checkpoint";
-    std::ofstream f(checkpoint);
-    if(f.is_open()) {
-        for(unsigned int l = 0; l < layers.size(); l++) {
-            f << layers[l].in_features() << " " << layers[l].out_features() << " \n";
-            std::vector<Node> *nodes = layers[l].get_nodes();
-            for(unsigned int n = 0; n < layers[l].out_features(); n++) {
-                std::vector<double> *weights = (*nodes)[n].weight_vector();
-                for(unsigned int i = 0; i < layers[l].in_features(); i++) f << (*weights)[i] << " ";
-                f << "\n";
+void DNN::train(std::vector<std::vector<double>> &train_x, std::vector<std::vector<double>> &train_y,
+                unsigned int epoch, unsigned int iteration, unsigned int batch_size, double alpha, double decay) {
+    unsigned int batch_num = 1;
+    unsigned int batch_start = 0;
+    unsigned int batch_end = batch_size;
+
+    double loss_t = 0.00;
+
+    for(unsigned int e = 1; e <= epoch; e++) {
+        shuffle(train_x, train_y);
+        std::cout << "=======================================EPOCH " + std::to_string(e) + "=======================================\n";
+
+        while(batch_start < train_x.size()) {
+            std::vector<std::vector<double>> batch_x = {train_x.begin() + batch_start, train_x.begin() + batch_end};
+            std::vector<std::vector<double>> batch_y = {train_y.begin() + batch_start, train_y.begin() + batch_end};
+
+            for(unsigned int i = 1; i <= iteration; i++) {
+                 for(unsigned int k = 0; k < batch_x.size(); k++)
+                     fit(batch_x[k], batch_y[k], alpha, train_x.size());
+
+                 double loss = 0.00;
+                 for(unsigned int k = 0; k < batch_x.size(); k++) {
+                     std::vector<double> yhat = predict(batch_x[k]);
+                     loss += mse(batch_y[k], yhat);
+
+                     std::vector<double>().swap(yhat);
+                 }
+                 loss /= batch_x.size();
+
+                 progress_bar(i, iteration, "BATCH " + std::to_string(batch_num) + " [LOSS = " + std::to_string(loss) + "]");
             }
-            f << "/ ";
-            if(l != layers.size() - 1) f << "\n";
+
+            std::vector<std::vector<double>>().swap(batch_x);
+            std::vector<std::vector<double>>().swap(batch_y);
+
+            batch_num++;
+            batch_start += batch_size;
+            batch_end + batch_size < train_x.size() ? batch_end += batch_size : batch_end = train_x.size();
         }
-        f.close();
-    }
-}
 
-bool DeepNet::load() {
-    bool loaded = false;
-    std::string checkpoint = "./models/" + name + "/dnn/checkpoint";
-    std::ifstream f(checkpoint);
-    if(f.is_open()) {
-        std::string line, val;
-        std::vector<unsigned int> shape;
-        bool have_shape = false;
-        unsigned int n, k = 0;
+        std::cout << "\n";
+        if(e != 1) std::cout << "PREVIOUS EPOCH LOSS = " << loss_t << "\n";
 
-        while(std::getline(f, line)) {
-            for(unsigned int i = 0; i < line.length(); i++) {
-                if(line[i] != ' ') val += line[i];
-                else {
-                    if(val.compare("/") == 0) {
-                        n = 0; k = 0;
-                        shape.clear();
-                        have_shape = false;
-                    }
-                    else {
-                        if(!have_shape) {
-                            shape.push_back(std::stoi(val));
-                            if(shape.size() == 2) {
-                                layers.push_back(Layer(shape[0], shape[1]));
-                                have_shape = true;
-                            }
-                        }
-                        else {
-                            std::vector<Node> *nodes = layers[layers.size() - 1].get_nodes();
-                            std::vector<double> *weights = (*nodes)[n].weight_vector();
-                            (*weights)[k] = std::stod(val);
-                            k++;
+        loss_t = 0.00;
+        for(unsigned int k = 0; k < train_x.size(); k++) {
+            std::vector<double> yhat = predict(train_x[k]);
+            if(classifier)
+                loss_t += binary_cross_entropy(train_y[k], yhat);
+            else
+                loss_t += mse(train_y[k], yhat);
 
-                            if(k == (*weights).size()) { n++; k = 0; }
-                        }
-                    }
-                    val = "";
-                }
-            }
+            std::vector<double>().swap(yhat);
         }
-        loaded = true;
-        f.close();
-    }
-    return loaded;
-}
+        loss_t /= train_x.size();
 
-void DeepNet::kill() {
-    for(unsigned int l = 0; l < layers.size(); l++) {
-        for(unsigned int n = 0; n < layers[l].out_features(); n++) {
-            std::vector<double> *weights = (*layers[l].get_nodes())[n].weight_vector();
-            (*weights).clear();
-        }
-        (*layers[l].get_nodes()).clear();
+        std::cout << "CURRENT EPOCH LOSS  = " << loss_t << "\n\n";
+
+        batch_num = 1;
+        batch_start = 0;
+        batch_end = batch_size;
+
+        if(e % (int)(epoch / 10) == 0) alpha *= 1.00 - decay;
     }
-    layers.clear();
 }
 

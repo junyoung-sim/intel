@@ -18,4 +18,6 @@ public:
     double predict(double x);
 };
 
+std::vector<double> local_linear_regression(std::vector<double> &dat, unsigned int neighbors);
+
 #endif

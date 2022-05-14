@@ -1,12 +1,15 @@
 COMPILER=g++
-VERSION=-std=c++2a
+VERSION=-std=c++20
 
-output: main.o linear.o dnn.o util.o
-	$(COMPILER) $(VERSION) main.o linear.o dnn.o util.o -o run
+output: main.o data.o linear.o dnn.o checkpoint.o
+	$(COMPILER) $(VERSION) main.o data.o linear.o dnn.o checkpoint.o -o exec
 	rm *.o
 
 main.o: ./src/main.cpp
 	$(COMPILER) $(VERSION) -c ./src/main.cpp
+
+data.o: ./src/data.cpp
+	$(COMPILER) $(VERSION) -c ./src/data.cpp
 
 linear.o: ./src/linear.cpp
 	$(COMPILER) $(VERSION) -c ./src/linear.cpp
@@ -14,5 +17,5 @@ linear.o: ./src/linear.cpp
 dnn.o: ./src/dnn.cpp
 	$(COMPILER) $(VERSION) -c ./src/dnn.cpp
 
-util.o: ./src/util.cpp
-	$(COMPILER) $(VERSION) -c ./src/util.cpp
+checkpoint.o: ./src/checkpoint.cpp
+	$(COMPILER) $(VERSION) -c ./src/checkpoint.cpp

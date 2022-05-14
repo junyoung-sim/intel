@@ -5,9 +5,8 @@
 
 #include "../lib/linear.hpp"
 
-std::vector<double> LinearRegression::model() {
-    return std::vector<double>({slope, bias});
-}
+std::vector<double> LinearRegression::model() { return std::vector<double>({slope, bias}); }
+double LinearRegression::predict(double x) { return slope * x + bias; }
 
 double LinearRegression::fit(std::vector<double> &x, std::vector<double> &y) {
     // compute x_mean and y_mean
@@ -27,21 +26,10 @@ double LinearRegression::fit(std::vector<double> &x, std::vector<double> &y) {
     }
     slope = delta_y / delta_x;
     bias = y_mean - slope * x_mean;
-    // compute mean squared error and residual squares
-    double mse = 0.00;
-    std::vector<double> residual;
-    for(unsigned int i = 0; i < x.size(); i++) {
-        double yhat = slope * x[i] + bias;
-        double residual_squared = pow(y[i] - yhat, 2);
-        residual.push_back(residual_squared);
-        mse += residual_squared;
-    }
-    mse /= x.size();
     // compute covariance of x and y
     double cov = 0.00;
-    for(unsigned int i = 0; i < x.size(); i++) {
+    for(unsigned int i = 0; i < x.size(); i++)
         cov += (x[i] - x_mean) * (y[i] - y_mean);
-    }
     cov /= x.size();
     // compute standard deviation of x and y
     double x_var, y_var = 0.00;
@@ -57,7 +45,36 @@ double LinearRegression::fit(std::vector<double> &x, std::vector<double> &y) {
     return r;
 }
 
-double LinearRegression::predict(double x) {
-    return slope * x + bias;
+// --- //
+
+std::vector<double> local_linear_regression(std::vector<double> &dat, unsigned int neighbors) {
+    std::vector<double> local_linear;
+    // compute local linear regression lines of each k-nearest data points
+    for(unsigned int i = 0; i < dat.size(); i++) {
+        std::vector<double> euclidean;
+        std::vector<unsigned int> indexes;
+        for(unsigned int k = 0; k < dat.size(); k++) {
+            euclidean.push_back(sqrt(pow(k - i, 2) + pow(dat[k] - dat[i], 2)));
+            indexes.push_back(k);
+        }
+        // sort indexes by lowest to highest euclidean distance
+        std::sort(indexes.begin(), indexes.end(), [&](unsigned int i, unsigned int j){return euclidean[i] < euclidean[j];});
+
+        std::vector<double> x = {indexes.begin(), indexes.begin() + neighbors};
+        std::vector<double> y;
+        for(unsigned int x_k: x) y.push_back(dat[x_k]);
+
+        LinearRegression line;
+        line.fit(x, y);
+
+        local_linear.push_back(line.predict(i));
+
+        std::vector<double>().swap(euclidean);
+        std::vector<unsigned int>().swap(indexes);
+        std::vector<double>().swap(x);
+        std::vector<double>().swap(y);
+    }
+
+    return local_linear;
 }
 
