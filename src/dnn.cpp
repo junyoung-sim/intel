@@ -160,7 +160,10 @@ void DNN::train(std::vector<std::vector<double>> &train_x, std::vector<std::vect
                  double loss = 0.00;
                  for(unsigned int k = 0; k < batch_x.size(); k++) {
                      std::vector<double> yhat = predict(batch_x[k]);
-                     loss += mse(batch_y[k], yhat);
+                     if(classifier)
+                         loss += binary_cross_entropy(batch_y[k], yhat);
+                     else
+                         loss += mse(batch_y[k], yhat);
 
                      std::vector<double>().swap(yhat);
                  }
