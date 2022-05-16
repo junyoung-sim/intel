@@ -88,6 +88,7 @@ public:
     std::vector<double> predict(std::vector<double> &x);
     void fit(std::vector<double> &x, std::vector<double> &y, double alpha, unsigned int dataset_size);
     void train(std::vector<std::vector<double>> &train_x, std::vector<std::vector<double>> &train_y,
+               std::vector<std::vector<double>> &validation_x, std::vector<std::vector<double>> &validation_y,
                unsigned int epoch, unsigned int iteration, unsigned int batch_size, double alpha, double decay);
 
     void save(std::string path);

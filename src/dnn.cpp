@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <fstream>
 
 #include "../lib/dnn.hpp"
 #include "../lib/data.hpp"
@@ -138,12 +139,16 @@ void DNN::fit(std::vector<double> &x, std::vector<double> &y, double alpha, unsi
 }
 
 void DNN::train(std::vector<std::vector<double>> &train_x, std::vector<std::vector<double>> &train_y,
+                std::vector<std::vector<double>> &validation_x, std::vector<std::vector<double>> &validation_y,
                 unsigned int epoch, unsigned int iteration, unsigned int batch_size, double alpha, double decay) {
     unsigned int batch_num = 1;
     unsigned int batch_start = 0;
     unsigned int batch_end = batch_size;
 
-    double loss_t = 0.00;
+    double training_loss = 0.00;
+    double validation_loss = 0.00;
+
+    std::vector<double> training_loss_history, validation_loss_history;
 
     for(unsigned int e = 1; e <= epoch; e++) {
         shuffle(train_x, train_y);
@@ -180,22 +185,39 @@ void DNN::train(std::vector<std::vector<double>> &train_x, std::vector<std::vect
             batch_end + batch_size < train_x.size() ? batch_end += batch_size : batch_end = train_x.size();
         }
 
-        std::cout << "\n";
-        if(e != 1) std::cout << "PREVIOUS EPOCH LOSS = " << loss_t << "\n";
+        // --- //
 
-        loss_t = 0.00;
+        training_loss = 0.00;
         for(unsigned int k = 0; k < train_x.size(); k++) {
             std::vector<double> yhat = predict(train_x[k]);
             if(classifier)
-                loss_t += binary_cross_entropy(train_y[k], yhat);
+                training_loss += binary_cross_entropy(train_y[k], yhat);
             else
-                loss_t += mse(train_y[k], yhat);
+                training_loss += mse(train_y[k], yhat);
 
             std::vector<double>().swap(yhat);
         }
-        loss_t /= train_x.size();
+        training_loss /= train_x.size();
+        training_loss_history.push_back(training_loss);
+        std::cout << "\nTRAINING LOSS    = " << training_loss;
 
-        std::cout << "CURRENT EPOCH LOSS  = " << loss_t << "\n\n";
+        // --- //
+
+        validation_loss = 0.00;
+        for(unsigned int k = 0; k < validation_x.size(); k++) {
+            std::vector<double> yhat = predict(validation_x[k]);
+            if(classifier)
+                validation_loss += binary_cross_entropy(validation_y[k], yhat);
+            else
+                validation_loss += mse(validation_y[k], yhat);
+
+            std::vector<double>().swap(yhat);
+        }
+        validation_loss /= validation_x.size();
+        validation_loss_history.push_back(validation_loss);
+        std::cout << "\nVALIDATION LOSS  = " << validation_loss << "\n\n";
+
+        // --- //
 
         batch_num = 1;
         batch_start = 0;
@@ -203,5 +225,20 @@ void DNN::train(std::vector<std::vector<double>> &train_x, std::vector<std::vect
 
         if(e % (int)(epoch / 10) == 0) alpha *= 1.00 - decay;
     }
+
+    // save loss history
+    std::ofstream out("./res/loss");
+    if(out.is_open()) {
+        for(unsigned int i = 0; i < training_loss_history.size(); i++) {
+            out << training_loss_history[i] << " " << validation_loss_history[i];
+            if(i != training_loss_history.size() - 1)
+                out << "\n";
+        }
+
+        out.close();
+    }
+
+    std::vector<double>().swap(training_loss_history);
+    std::vector<double>().swap(validation_loss_history);
 }
 
