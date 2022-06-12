@@ -8,13 +8,10 @@
 #include <random>
 #include <string>
 
-double elu(double x);
-double elu_prime(double x);
-
-void softmax(std::vector<double> &v);
+double relu(double x);
+double relu_prime(double x);
 
 double mse(std::vector<double> &y, std::vector<double> &yhat);
-double binary_cross_entropy(std::vector<double> &y, std::vector<double> &yhat);
 
 class Node
 {
@@ -71,7 +68,6 @@ class DNN
 {
 private:
     std::vector<Layer> layers;
-    bool classifier;
 public:
     DNN() {}
     DNN(std::vector<std::vector<unsigned int>> shape) {
@@ -79,13 +75,10 @@ public:
         std::default_random_engine generator;
         for(unsigned int l = 0; l < shape.size(); l++)
             layers.push_back(Layer(shape[l][0], shape[l][1], generator));
-
-        classifier = false;
     }
 
-    void use_classifier();
-
     std::vector<double> predict(std::vector<double> &x);
+
     void fit(std::vector<double> &x, std::vector<double> &y, double alpha, unsigned int dataset_size);
     void train(std::vector<std::vector<double>> &train_x, std::vector<std::vector<double>> &train_y,
                std::vector<std::vector<double>> &validation_x, std::vector<std::vector<double>> &validation_y,
